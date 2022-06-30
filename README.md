@@ -83,6 +83,7 @@ For Assisted Installer we need to create an agent service configuration resource
 
 ~~~bash
 ~ % cat << EOF > ~/kni20-agentserviceconfig.yaml
+apiVersion: agent-install.openshift.io/v1beta1
 kind: AgentServiceConfig
 metadata:
  name: agent
