@@ -164,7 +164,7 @@ secret/pull-secret created
 Next we will generate an infrastructure environment resource configuration that will contain an public SSH key:
 
 ~~~bash
-$ cat << EOF > ~/infraenv.yaml
+$ cat << EOF > ~/kni21-infraenv.yaml
 ---
 apiVersion: agent-install.openshift.io/v1beta1
 kind: InfraEnv
@@ -183,14 +183,17 @@ EOF
 With the infrastructure environment file created lets apply it to the hub cluster:
 
 ~~~bash
-$ oc create -f ~/infraenv.yaml
+$ oc create -f ~/kni21-infraenv.yaml
 infraenv.agent-install.openshift.io/kni21 created
 ~~~
 
-### Download ISO
-Once we have the infraenv created, assisted-service will create an ISO image for it
-We can then proceed to download the full ISO file:
+Now lets take a look at the infrastucture environment output.  Specifically we want to look the contents of the ipxeScript.  
 
 ~~~bash
+$ oc get infraenv kni21 -n kni21 -o yaml|grep ipxeScript
+    ipxeScript: http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac-9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script
+~~~
 
+~~~bash
+curl -L -o ipxe -O 'http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script'
 ~~~
