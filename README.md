@@ -8,7 +8,14 @@ With the introduction of Red Hat Advanced Cluster Management for Kubernetes 2.5.
 
 First lets talk a bit about the reference architecture I am using.  I currently have a Red Hat Advanced Cluster Management for Kubernestes 2.5.1 hub cluster running on a 3 node compact OpenShift 4.10.16 cluster with OpenShift Data Foundation 4.10 acting as the storage for any of my persisten volume requirements.  Further I have a ISCP DHCP server setup on my private network of 192.168.0.0/24 to provide DHCP reservations for the 3 hosts we will discover via the PXE boot method and deploy OpenShift onto.
 
-First let's create the ClusterImageset resource yaml which will point to our mirrored instance of OpenShift 4.10.16 in Quay:
+Before we can use the Cluster Infrastrutcture Management portion of Red Hat Advanced Cluster Management for Kubernetes we need to enable the metal3 provisioning configuration to watch all namespace.
+
+~~~bash
+$ oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"watchAllNamespaces": true }}'
+provisioning.metal3.io/provisioning-configuration patched
+~~~
+
+Next let's create the ClusterImageset resource yaml which will point to OpenShift 4.10.16:
 
 ~~~bash
 ~ % cat << EOF > ~/kni20-clusterimageset.yaml
