@@ -23,7 +23,7 @@ apiVersion: hive.openshift.io/v1
 kind: ClusterImageSet
 metadata:
   name: openshift-v4.10.16
-  namespace: open-cluster-management
+  namespace: multicluster-engine
 spec:
   releaseImage: quay.io/openshift-release-dev/ocp-release:4.10.16-x86_64
 EOF  
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kni20-mirror-config
-  namespace: open-cluster-management
+  namespace: multicluster-engine
   labels:
     app: assisted-service
 data:
