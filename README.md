@@ -18,7 +18,7 @@ provisioning.metal3.io/provisioning-configuration patched
 Next let's create the ClusterImageset resource yaml which will point to OpenShift 4.10.16:
 
 ~~~bash
-~ % cat << EOF > ~/kni20-clusterimageset.yaml
+$ cat << EOF > ~/kni20-clusterimageset.yaml
 apiVersion: hive.openshift.io/v1
 kind: ClusterImageSet
 metadata:
@@ -32,7 +32,7 @@ EOF
 Now let's apply the cluster imageset to the cluster:
 
 ~~~bash
-~ % oc create -f ~/kni20-clusterimageset.yaml 
+$ oc create -f ~/kni20-clusterimageset.yaml 
 clusterimageset.hive.openshift.io/openshift-v4.10.16 created
 ~~~
 
@@ -41,7 +41,7 @@ Next we need to create a mirror config which tells the assisted image service wh
 Let's create the config using the below:
 
 ~~~bash
-~ % cat << EOF > ~/kni20-mirror-config.yaml
+$ cat << EOF > ~/kni20-mirror-config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -82,14 +82,14 @@ EOF
 Now let's create the mirror configuration on cluster0:
 
 ~~~bash
-~ % oc create -f kni20-mirror-config.yaml 
+$ oc create -f kni20-mirror-config.yaml 
 configmap/kni20-mirror-config created
 ~~~
 
 For Assisted Installer we need to create an agent service configuration resource that will tell the operator how much storage we need for the various components like database and filesystem. It will also define which OpenShift versions to maintain.
 
 ~~~bash
-~ % cat << EOF > ~/kni20-agentserviceconfig.yaml
+$ cat << EOF > ~/kni20-agentserviceconfig.yaml
 apiVersion: agent-install.openshift.io/v1beta1
 kind: AgentServiceConfig
 metadata:
@@ -122,58 +122,49 @@ EOF
 Once the agent service configuration file is created apply it to the cluster:
 
 ~~~bash
-~ % oc create -f ~/kni20-agentserviceconfig.yaml
+$ oc create -f ~/kni20-agentserviceconfig.yaml
 agentserviceconfig.agent-install.openshift.io/agent created
 ~~~
 
 After a few minutes validate that the pods for the Infrastructure operator have started:
 
 ~~~bash
-~ % oc get pods -n open-cluster-management |grep assisted
-assisted-image-service-595484bc6c-cr2ww                           1/1     Running   0            3m10s
-assisted-service-66768fbbd9-ncwrl                                 2/2     Running   1 (27s ago)  3m
+$ oc get pods -n multicluster-engine |grep assisted
+assisted-image-service-0                               0/1     Running   0          92s
+assisted-service-5b65cfd866-sp2vs                      2/2     Running   0          93s
 
 
-~ % oc get pvc -n open-cluster-management 
-NAME                      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  AGE
-assisted-service          Bound    pvc-13150c6f-7b16-48c4-bb1b-cd81f94f9259   100Gi      RWO            ocs-storagecluster-ceph-rbd   3m35s
-postgres                  Bound    pvc-4bd16251-780e-40ac-9fa2-897b4ab9f71b   100Gi      RWO            ocs-storagecluster-ceph-rbd   3m35s
-search-redisgraph-pvc-0   Bound    pvc-4cb27249-ccdb-491c-8a1c-3fa2908e67e6   10Gi       RWO            ocs-storagecluster-ceph-rbd   9d
+$ oc get pvc -n multicluster-engine
+NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  AGE
+assisted-service   Bound    pvc-5d485331-c3e2-4331-bbe8-1635be66d07d   20Gi       RWO            ocs-storagecluster-ceph-rbd   114s
+postgres           Bound    pvc-bcfa2e1c-63b7-4818-9848-00c6101efcce   20Gi       RWO            ocs-storagecluster-ceph-rbd   113s
 
-~ % oc get routes -n open-cluster-management
-NAME                     HOST/PORT                                                                                    PATH   SERVICES                 PORT                     TERMINATION          WILDCARD
-assisted-image-service   assisted-image-service-open-cluster-management.apps.magic-metal-cluster.simcloud.apple.com          assisted-image-service   assisted-image-service   reencrypt            None
-assisted-service         assisted-service-open-cluster-management.apps.magic-metal-cluster.simcloud.apple.com                assisted-service         assisted-service         reencrypt            None
-multicloud-console       multicloud-console.apps.magic-metal-cluster.simcloud.apple.com                                      management-ingress       https                    reencrypt/Redirect   None
+$ oc get routes -n multicluster-engine
+NAME                          HOST/PORT                                                               PATH   SERVICES                 PORT                          TERMINATION   WILDCARD
+assisted-image-service        assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com          assisted-image-service   assisted-image-service        reencrypt     None
+assisted-image-service-ipxe   assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com   /      assisted-image-service   assisted-image-service-http                 None
+assisted-service              assisted-service-multicluster-engine.apps.kni20.schmaustech.com                assisted-service         assisted-service              reencrypt     None
+assisted-service-ipxe         assisted-service-multicluster-engine.apps.kni20.schmaustech.com         /      assisted-service         assisted-service-http                       None
 ~~~
 
-We have now completed the additional configuration steps needed for Hive and Assisted Installer.
+We have now completed the additional configuration steps needed for Cluster Infrastructure Management and Assisted Installer.  Now lets move onto defining the resources for spoke cluster which will be called kni21.  The first step here is to create a namespace which we will name after our cluster name:
 
 ~~~bash
-% oc create namespace kni21
+$ oc create namespace kni21
 namespace/kni21 created
 ~~~
 
-### Credentials
-
-We need to create a secret that will hold the pull-secret credentials.
-
-
-Next create a kubernetes secret to hold the credentials.
+Next we need to create a secret to store our pull-secret within that namespace:
 
 ~~~bash
-% oc create secret generic pull-secret -n kni21 --from-file=.dockerconfigjson=disconnected-quay-merged-pull-secret.json --type=kubernetes.io/dockerconfigjson
+$ oc create secret generic pull-secret -n kni21 --from-file=.dockerconfigjson=merged-pull-secret.json --type=kubernetes.io/dockerconfigjson
 secret/pull-secret created
 ~~~
 
-### Infraenv
+Next we will generate an infrastructure environment resource configuration that will contain an public SSH key:
 
-In the infraenv manifest we should tweak the following fields:
-- `sshAuthorizedKey` - ssh public key that will be added to `core` username's authorized_keys in the initial ISO booted live system
-
-Let's generate the infraenv manifest:
 ~~~bash
-% cat << EOF > ~/infraenv.yaml
+$ cat << EOF > ~/infraenv.yaml
 ---
 apiVersion: agent-install.openshift.io/v1beta1
 kind: InfraEnv
@@ -183,16 +174,16 @@ metadata:
 spec:
   agentLabels:
     project: kni21
-  sshAuthorizedKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC/fp2Kc5yzvpMJWYXzCKhdgYyuJE8Zf5RnhQ0vbjFwDNkPizdecgy+uBaopFpVU/lpRtHgWX3+2+vDvDcoZcrMna1EL6bEfJuE6X/2bDu786MX3t2GVUG8kBfoAymXugedU+I8H+YtgjRuHpXdiUtXNxk2n+7LeDviGB5Bgf6zjCcOiS8996iasISIYHTAikRtoYNodSQYEFjFN3ja+P7Smtk6TCWPmpkPXqKY3KtRuj/TCivWH2c/zIrFHtKhifJrAkrfFIX6w6qPaT42RRHvOwAHf5D+2jNcvaPzvRXiBkbOznoW/P5vN9hui8BdybbxZ7CBwcaW9JXalq34zRhVoYeiDoRLGYy62CJQaI6ISXO5tLjokWz39/phMkVUH+LMKpZVSvmQ7dWJyuTgEM66NMUFRZv/G4QqMNqCPoD6P3YSppzvc7cSS68ABGH+pRI0sN6KjD6dOKzjKYkxTyi9ja+j0oY9I55C7fsyck/pMZFP2FlM3B3l6N9M39fJEGU= javipolo@javipolos-MacBook-Pro.local"
+  sshAuthorizedKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCoy2/8SC8K+9PDNOqeNady8xck4AgXqQkf0uusYfDJ8IS4pFh178AVkz2sz3GSbU41CMxO6IhyQS4Rga3Ft/VlW6ZAW7icz3mw6IrLRacAAeY1BlfxfupQL/yHjKSZRze9vDjfQ9UDqlHF/II779Kz5yRKYqXsCt+wYESU7DzdPuGgbEKXrwi9GrxuXqbRZOz5994dQW7bHRTwuRmF9KzU7gMtMCah+RskLzE46fc2e4zD1AKaQFaEm4aGbJjQkELfcekrE/VH3i35cBUDacGcUYmUEaco3c/+phkNP4Iblz4AiDcN/TpjlhbU3Mbx8ln6W4aaYIyC4EVMfgvkRVS1xzXcHexs1fox724J07M1nhy+YxvaOYorQLvXMGhcBc9Z2Au2GA5qAr5hr96AHgu3600qeji0nMM/0HoiEVbxNWfkj4kAegbItUEVBAWjjpkncbe5Ph9nF2DsBrrg4TsJIplYQ+lGewzLTm/cZ1DnIMZvTY/Vnimh7qa9aRrpMB0= bschmaus@provisioning"
   pullSecretRef:
     name: pull-secret
 EOF
 ~~~
 
+With the infrastructure environment file created lets apply it to the hub cluster:
 
-And now lets create the infraenv on cluster0:
 ~~~bash
-% oc create -f ~/infraenv.yaml
+$ oc create -f ~/infraenv.yaml
 infraenv.agent-install.openshift.io/kni21 created
 ~~~
 
@@ -201,8 +192,5 @@ Once we have the infraenv created, assisted-service will create an ISO image for
 We can then proceed to download the full ISO file:
 
 ~~~bash
-% oc get infraenv -n magic-carpet magic-carpet -o jsonpath='{.status.isoDownloadURL}' | sed s/minimal-iso/full-iso/g | xargs curl -kLo ~/magic-carpet.iso
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  999M  100  999M    0     0  4194k      0  0:04:03  0:04:03 --:--:-- 5531k
+
 ~~~
