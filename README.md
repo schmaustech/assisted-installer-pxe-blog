@@ -101,7 +101,7 @@ spec:
       requests:
         storage: 20Gi
   mirrorRegistryRef:
-    name: "poc-mirror-config"
+    name: "kni20-mirror-config"
   osImages:
     - openshiftVersion: "4.10"
       version: "410.84.202205191234-0"
