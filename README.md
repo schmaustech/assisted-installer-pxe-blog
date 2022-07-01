@@ -289,7 +289,7 @@ We need to tweak it accordingly:
 - `sshPublicKey` - ssh public key that will be added to `core` username's authorized_keys in every node
 
 ~~~bash
-% cat << EOF > ~/cluster-kni21.yaml
+$ cat << EOF > ~/cluster-kni21.yaml
 ---
 apiVersion: extensions.hive.openshift.io/v1beta1
 kind: AgentClusterInstall
@@ -324,7 +324,7 @@ In ClusterDeployment resource, which we are appending to the already created clu
 - The `Secret` containing our pullSecret
 
 ~~~bash
-% cat << EOF >> ~/cluster-kni21.yaml
+$ cat << EOF >> ~/cluster-kni21.yaml
 ---
 apiVersion: hive.openshift.io/v1
 kind: ClusterDeployment
@@ -355,7 +355,7 @@ EOF
 The rest of the components which will also be appended do not need much tweaking:
 
 ~~~bash
-% cat << EOF >> ~/cluster-kni21.yaml
+$ cat << EOF >> ~/cluster-kni21.yaml
 ---
 apiVersion: agent.open-cluster-management.io/v1
 kind: KlusterletAddonConfig
@@ -393,7 +393,7 @@ EOF
 With the resource file cluster-kni21.yaml created lets go ahead and apply it to our hub cluster:
 
 ~~~bash
-% oc create -f ~/cluster1.yaml
+$ oc create -f ~/cluster-kni21.yaml
 agentclusterinstall.extensions.hive.openshift.io/cluster1 created
 clusterdeployment.hive.openshift.io/cluster1 created
 klusterletaddonconfig.agent.open-cluster-management.io/cluster1 created
@@ -403,7 +403,7 @@ managedcluster.cluster.open-cluster-management.io/cluster1 created
 Now that we have a cluster defined lets go ahead and associate the nodes we discovered with our agent to the cluster.  We do this by binding them to the cluster we just defined:
 
 ~~~bash
-% oc get agent -n magic-carpet -o json | jq -r '.items[] | select(.spec.approved==false) | .metadata.name' | xargs oc -n magic-carpet patch -p '{"spec":{"clusterDeploymentName":{"name": "cluster1", "namespace": "cluster1"}}}' --type merge agent
+$ oc get agent -n kni21 -o json | jq -r '.items[] | select(.spec.approved==false) | .metadata.name' | xargs oc -n kni21 patch -p '{"spec":{"clusterDeploymentName":{"name": "kni21", "namespace": "kni21"}}}' --type merge agent
 agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
 agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
 agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
@@ -414,20 +414,20 @@ agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
 Then we can either manually approve each agent with the following:
 
 ~~~bash
-~ % oc -n magic-carpet patch -p '{"spec":{"approved":true}}' --type merge agent <AGENT_ID_NAME>
+$ oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent <AGENT_ID_NAME>
 ~~~
 
 Or we can approve them all as we did in this example:
 
 ~~~bash
-~ % oc get agent -n magic-carpet -ojson | jq -r '.items[] | select(.spec.approved==false) | .metadata.name'| xargs oc -n magic-carpet patch -p '{"spec":{"approved":true}}' --type merge agent
+$ oc get agent -n kni21 -ojson | jq -r '.items[] | select(.spec.approved==false) | .metadata.name'| xargs oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent
 agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
 agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
 agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
 agent.agent-install.openshift.io/43c52512-05bb-70c0-d453-b6e171a89db3 patched
 agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
 
-~ % oc get agent -n magic-carpet                                                                                                                                                              
+$ oc get agent -n kni21                                                                                                                                                              
 NAME                                   CLUSTER   APPROVED   ROLE          STAGE
 2aa0c057-1582-ca6a-7949-bb1e82496e71             true       auto-assign   
 371e1165-d9ad-d17a-d28a-ebf2a32239ae             true       auto-assign   
@@ -441,18 +441,18 @@ NAME                                   CLUSTER   APPROVED   ROLE          STAGE
 Now all we need is to wait for the cluster to be fully provisioned
 As a node is installed, we should see its agent transitioning to `Done` state
 ~~~bash
-oc get agent -n magic-carpet -w
+$ oc get agent -n kni21 -w
 ~~~
 
 We should extract the kubeconfig file from its secret in the cluster's namespace
 ~~~bash
-oc get secret -n cluster1 cluster1-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > cluster1-kubeconfig
+$ oc get secret -n kni21 kni21-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > kni21-kubeconfig
 ~~~
 
 
 And now we can query the cluster API using `oc`
 ~~~bash
-KUBECONFIG=cluster1-kubeconfig oc get node
-KUBECONFIG=cluster1-kubeconfig oc get clusteroperators
-KUBECONFIG=cluster1-kubeconfig oc get clusterversion
+$ KUBECONFIG=cluster-kni21-kubeconfig oc get node
+$ KUBECONFIG=cluster-kni21-kubeconfig oc get clusteroperators
+$ KUBECONFIG=cluster-kni21-kubeconfig oc get clusterversion
 ~~~
