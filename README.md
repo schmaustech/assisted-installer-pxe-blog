@@ -404,11 +404,19 @@ Now that we have a cluster defined lets go ahead and associate the nodes we disc
 
 ~~~bash
 $ oc get agent -n kni21 -o json | jq -r '.items[] | select(.spec.approved==false) | .metadata.name' | xargs oc -n kni21 patch -p '{"spec":{"clusterDeploymentName":{"name": "kni21", "namespace": "kni21"}}}' --type merge agent
-agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
-agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
-agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
-agent.agent-install.openshift.io/43c52512-05bb-70c0-d453-b6e171a89db3 patched
-agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
+agent.agent-install.openshift.io/07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a patched
+agent.agent-install.openshift.io/cef2bbd6-f974-5ecf-331e-db11391fd7a5 patched
+agent.agent-install.openshift.io/d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9 patched
+~~~
+
+After binding the agents should look like this:
+
+~~~bash
+$  oc get agent -n kni21
+NAME                                   CLUSTER   APPROVED   ROLE          STAGE
+07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a   kni21     false      auto-assign   
+cef2bbd6-f974-5ecf-331e-db11391fd7a5   kni21     false      auto-assign   
+d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9   kni21     false      auto-assign   
 ~~~
 
 Then we can either manually approve each agent with the following:
@@ -417,26 +425,20 @@ Then we can either manually approve each agent with the following:
 $ oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent <AGENT_ID_NAME>
 ~~~
 
-Or we can approve them all as we did in this example:
+Or we can approve them all as we did in when we bound them.  Note that the cluster installation will not proceed until they are approved.
 
 ~~~bash
 $ oc get agent -n kni21 -ojson | jq -r '.items[] | select(.spec.approved==false) | .metadata.name'| xargs oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent
-agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
-agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
-agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
-agent.agent-install.openshift.io/43c52512-05bb-70c0-d453-b6e171a89db3 patched
-agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
+agent.agent-install.openshift.io/07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a patched
+agent.agent-install.openshift.io/cef2bbd6-f974-5ecf-331e-db11391fd7a5 patched
+agent.agent-install.openshift.io/d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9 patched
 
-$ oc get agent -n kni21                                                                                                                                                              
-NAME                                   CLUSTER   APPROVED   ROLE          STAGE
-2aa0c057-1582-ca6a-7949-bb1e82496e71             true       auto-assign   
-371e1165-d9ad-d17a-d28a-ebf2a32239ae             true       auto-assign   
-3ada3adc-611f-687a-2429-dea0e85a980c             true       auto-assign   
-43c52512-05bb-70c0-d453-b6e171a89db3             true       auto-assign   
-56eccb54-28af-4983-a19b-ed036f05b7d6             true       auto-assign 
+$ oc get agent -n kni21
+NAME                                   CLUSTER   APPROVED   ROLE     STAGE
+07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a   kni21     true       master   
+cef2bbd6-f974-5ecf-331e-db11391fd7a5   kni21     true       master   
+d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9   kni21     true       master  
 ~~~
-
-
 
 Now all we need is to wait for the cluster to be fully provisioned
 As a node is installed, we should see its agent transitioning to `Done` state
