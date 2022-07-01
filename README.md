@@ -212,7 +212,7 @@ kernel http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.
 boot
 ~~~
 
-To consume the iPXE we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example my systems boot with PXE and by default 
+To consume the iPXE we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example I chose to host the ipxe script myself and chain any PXE clients to boot into an iPXE kernel to pick it up.   The snippets from my relevant DHCP config is below:
 
 ~~~
 subnet 192.168.0.0 netmask 255.255.255.0 {
@@ -226,7 +226,7 @@ subnet 192.168.0.0 netmask 255.255.255.0 {
         if exists user-class and option user-class = "iPXE" {
             filename "ipxe";
         } else {
-            filename "lpxelinux.0";
+            filename "pxelinux.0";
         }
     }
 }
@@ -250,6 +250,18 @@ host nuc3 {
 }
 ~~~
 
-~~~bash
+Along with the DHCP configuration I have the following files present in my tftboot location.  What happens in my DHCP chaining example is that a PXE client will boot request and DHCP will see its a PXE client and serve it pxelinux.0 which points to a default config under the pxelinux.cfg directory.  The default config is just a pointer to an iPXE kernel which will then be called and request DHCP again which now is seen as an iPXE client and will execute the iPXE script to start the boot process.
 
+~~~bash
+$ pwd
+/var/lib/tftpboot
+$ ls
+ipxe  ipxe.efi  ipxe.lkrn  ldlinux.c32  libcom32.c32  libutil.c32  menu.c32  pxelinux.0  pxelinux.cfg  undionly.kpxe  vesamenu.c32
+$ cat ./pxelinux.cfg/default 
+DEFAULT ipxe.lkrn
 ~~~
+
+With our DHCP configurations in place we can now boot our 3 nodes that will be used to deploy our kni21 cluster.  The following screenshot is an example of what one would expect to see.  In this example we also see how the chaining works.
+
+<img src="ipxe-dhcp.jpg" style="width: 1000px;" border=0/>
+
