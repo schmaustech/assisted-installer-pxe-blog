@@ -138,7 +138,10 @@ $ oc get pvc -n multicluster-engine
 NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  AGE
 assisted-service   Bound    pvc-5d485331-c3e2-4331-bbe8-1635be66d07d   20Gi       RWO            ocs-storagecluster-ceph-rbd   114s
 postgres           Bound    pvc-bcfa2e1c-63b7-4818-9848-00c6101efcce   20Gi       RWO            ocs-storagecluster-ceph-rbd   113s
+~~~
 
+
+~~~bash
 $ oc get routes -n multicluster-engine
 NAME                          HOST/PORT                                                               PATH   SERVICES                 PORT                          TERMINATION   WILDCARD
 assisted-image-service        assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com          assisted-image-service   assisted-image-service        reencrypt     None
@@ -242,4 +245,6 @@ host nuc3 {
 }
 ~~~
 
+~~~bash
 
+~~~
