@@ -197,3 +197,49 @@ $ oc get infraenv kni21 -n kni21 -o yaml|grep ipxeScript
 ~~~bash
 curl -L -o ipxe -O 'http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script'
 ~~~
+
+~~~bash
+$ cat ipxe
+#!ipxe
+initrd --name initrd http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com/images/a2ab51ad-c217-4bac-9a45-1d3eebb88b9a/pxe-initrd?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.9F_vEPli7TkAXAkFPWnFkeXK5xTMgVcwHScCuzi_DoWllbyoGgd9byl4W8yZOMSID2q_DvMSdY1ByLlMEqJcwQ&arch=x86_64&version=4.10
+kernel http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com/boot-artifacts/kernel?arch=x86_64&version=4.10 initrd=initrd coreos.live.rootfs_url=http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com/boot-artifacts/rootfs?arch=x86_64&version=4.10 random.trust_cpu=on rd.luks.options=discard ignition.firstboot ignition.platform.id=metal console=tty1 console=ttyS1,115200n8 coreos.inst.persistent-kargs="console=tty1 console=ttyS1,115200n8"
+boot
+~~~
+
+~~~
+subnet 192.168.0.0 netmask 255.255.255.0 {
+        option routers                  192.168.0.1;
+        option subnet-mask              255.255.255.0;
+        option domain-search            "schmaustech.com";
+        option domain-name-servers      192.168.0.10;
+        option time-offset              -18000;
+        range   192.168.0.225   192.168.0.240;
+        next-server 192.168.0.10;
+        if exists user-class and option user-class = "iPXE" {
+            filename "ipxe";
+        } else {
+            filename "lpxelinux.0";
+        }
+    }
+}
+
+host nuc1 {
+   option host-name "nuc1.schmaustech.com";
+   hardware ethernet b8:ae:ed:72:10:f6;
+   fixed-address 192.168.0.2;
+}
+
+host nuc2 {
+   option host-name "nuc2.schmaustech.com";
+   hardware ethernet c0:3f:d5:6d:52:bc;
+   fixed-address 192.168.0.3;
+}
+
+host nuc3 {
+   option host-name "nuc3.schmaustech.com";
+   hardware ethernet b8:ae:ed:71:fc:5f;
+   fixed-address 192.168.0.6;
+}
+~~~
+
+
