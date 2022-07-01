@@ -273,9 +273,10 @@ cef2bbd6-f974-5ecf-331e-db11391fd7a5             false      auto-assign
 d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9             false      auto-assign 
 ~~~
 
-With the hosts booted and showing under the agent we now need to create the cluster manifests which will define what our cluster kni21 should look like.  There is some information we need to feed the manifest to define the configuration of the cluster:
+With the hosts booted and showing under the agent we now need to create the spoke cluster manifests which will define what our cluster kni21 should look like.  There is some information we need to feed the manifest to define the configuration of the spoke cluster:
 
-AgentClusterInstall will hold the configuration for the cluster that we're about to provision, also will be the resource that we will be watching to debug issues
+AgentClusterInstall will hold the configuration for the spoke cluster that we're about to provision.  It will also be the resource that we can watch during the deployment process in the event we need to debug issues.
+
 We need to tweak it accordingly:
 - `imageSetRef` - This is the ClusterImageSet that will be used (Openshift Version)
 - `apiVIP` and `ingressVIP` - The IPs we reserved for API and Ingress usage
@@ -314,7 +315,7 @@ spec:
 EOF
 ~~~
 
-In ClusterDeployment resource, which we are appending to the already created cluster-kni21.yaml, we need define
+In ClusterDeployment resource, which we are appending to the already created cluster-kni21.yaml, we need define:
 - `baseDomain`
 - `clusterName`
 - The name of the `AgentClusterInstall` resource associated to this cluster
@@ -350,7 +351,7 @@ spec:
 EOF
 ~~~
 
-The rest of the components which will also be appended do not need much tweaking:
+The KlusterletAddonConfig and ManagedCluster components which will also be appended do not need much tweaking:
 
 ~~~bash
 $ cat << EOF >> ~/cluster-kni21.yaml
@@ -398,7 +399,7 @@ klusterletaddonconfig.agent.open-cluster-management.io/cluster1 created
 managedcluster.cluster.open-cluster-management.io/cluster1 created
 ~~~
 
-Now that we have a cluster defined lets go ahead and associate the nodes we discovered with our agent to the cluster.  We do this by binding them to the cluster we just defined:
+Now that we have our kni21 spoke cluster defined lets go ahead and associate the nodes we discovered with our agent to the cluster.  We do this by binding them to the cluster we just defined:
 
 ~~~bash
 $ oc get agent -n kni21 -o json | jq -r '.items[] | select(.spec.approved==false) | .metadata.name' | xargs oc -n kni21 patch -p '{"spec":{"clusterDeploymentName":{"name": "kni21", "namespace": "kni21"}}}' --type merge agent
@@ -407,7 +408,7 @@ agent.agent-install.openshift.io/cef2bbd6-f974-5ecf-331e-db11391fd7a5 patched
 agent.agent-install.openshift.io/d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9 patched
 ~~~
 
-After binding the agents should look like this:
+After binding the agents the nodes should look like this:
 
 ~~~bash
 $  oc get agent -n kni21
@@ -423,7 +424,7 @@ Then we can either manually approve each agent with the following:
 $ oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent <AGENT_ID_NAME>
 ~~~
 
-Or we can approve them all as we did in when we bound them.  Note that the cluster installation will not proceed until they are approved.
+Or we can approve them all as we did when we bound them in a previous step.  Note that the cluster installation will not proceed until they are approved.
 
 ~~~bash
 $ oc get agent -n kni21 -ojson | jq -r '.items[] | select(.spec.approved==false) | .metadata.name'| xargs oc -n kni21 patch -p '{"spec":{"approved":true}}' --type merge agent
