@@ -437,15 +437,22 @@ NAME                                   CLUSTER   APPROVED   ROLE          STAGE
 ~~~
 
 
-### Wait for installation process to complete
+
 Now all we need is to wait for the cluster to be fully provisioned
 As a node is installed, we should see its agent transitioning to `Done` state
 ~~~bash
 oc get agent -n magic-carpet -w
 ~~~
 
-### Extract kubeconfig for cluster1
 We should extract the kubeconfig file from its secret in the cluster's namespace
 ~~~bash
 oc get secret -n cluster1 cluster1-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > cluster1-kubeconfig
+~~~
+
+
+And now we can query the cluster API using `oc`
+~~~bash
+KUBECONFIG=cluster1-kubeconfig oc get node
+KUBECONFIG=cluster1-kubeconfig oc get clusteroperators
+KUBECONFIG=cluster1-kubeconfig oc get clusterversion
 ~~~
