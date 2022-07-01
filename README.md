@@ -274,3 +274,178 @@ NAME                                   CLUSTER   APPROVED   ROLE          STAGE
 cef2bbd6-f974-5ecf-331e-db11391fd7a5             false      auto-assign   
 d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9             false      auto-assign 
 ~~~
+
+With the hosts booted and showing under the agent we now need to create the cluster manifests which will define what our cluster kni21 should look like.  There is some information we need to feed the manifest to define the configuration of the cluster:
+
+AgentClusterInstall will hold the configuration for the cluster that we're about to provision, also will be the resource that we will be watching to debug issues
+We need to tweak it accordingly:
+- `imageSetRef` - This is the ClusterImageSet that will be used (Openshift Version)
+- `apiVIP` and `ingressVIP` - The IPs we reserved for API and Ingress usage
+- `clusterNetwork`.cidr - CIDR for the kubernetes pods
+- `clusterNetwork`.hostPrefix - Network prefix that will determine how many IPs are reserved for each node
+- `serviceNetwork` - The CIDR that will be used for kubernetes services
+- `controlPlaneAgents` - The number of control plane nodes we will be provisioning
+- `workerAgents` - Number of worker agents we are provisioning now
+- `sshPublicKey` - ssh public key that will be added to `core` username's authorized_keys in every node
+
+~~~bash
+% cat << EOF > ~/cluster-kni21.yaml
+---
+apiVersion: extensions.hive.openshift.io/v1beta1
+kind: AgentClusterInstall
+metadata:
+  name: kni21
+  namespace: kni21
+spec:
+  clusterDeploymentRef:
+    name: kni21
+  imageSetRef:
+    name: openshift-v4.10.16
+  apiVIP: "192.168.0.120"
+  ingressVIP: "192.168.0.121"
+  networking:
+    clusterNetwork:
+      - cidr: "10.128.0.0/14"
+        hostPrefix: 23
+    serviceNetwork:
+      - "172.30.0.0/16"
+  provisionRequirements:
+    controlPlaneAgents: 3
+    workerAgents: 0
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCoy2/8SC8K+9PDNOqeNady8xck4AgXqQkf0uusYfDJ8IS4pFh178AVkz2sz3GSbU41CMxO6IhyQS4Rga3Ft/VlW6ZAW7icz3mw6IrLRacAAeY1BlfxfupQL/yHjKSZRze9vDjfQ9UDqlHF/II779Kz5yRKYqXsCt+wYESU7DzdPuGgbEKXrwi9GrxuXqbRZOz5994dQW7bHRTwuRmF9KzU7gMtMCah+RskLzE46fc2e4zD1AKaQFaEm4aGbJjQkELfcekrE/VH3i35cBUDacGcUYmUEaco3c/+phkNP4Iblz4AiDcN/TpjlhbU3Mbx8ln6W4aaYIyC4EVMfgvkRVS1xzXcHexs1fox724J07M1nhy+YxvaOYorQLvXMGhcBc9Z2Au2GA5qAr5hr96AHgu3600qeji0nMM/0HoiEVbxNWfkj4kAegbItUEVBAWjjpkncbe5Ph9nF2DsBrrg4TsJIplYQ+lGewzLTm/cZ1DnIMZvTY/Vnimh7qa9aRrpMB0= bschmaus@provisioning"
+EOF
+~~~
+
+In ClusterDeployment resource, which we are appending to the already created cluster-kni21.yaml, we need define
+- `baseDomain`
+- `clusterName`
+- The name of the `AgentClusterInstall` resource associated to this cluster
+- An `agentSelector` that matches the agents labels
+- The `Secret` containing our pullSecret
+
+~~~bash
+% cat << EOF >> ~/cluster-kni21.yaml
+---
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: kni21
+  namespace: kni21
+spec:
+  baseDomain: schmaustech.com
+  clusterName: kni21
+  controlPlaneConfig:
+    servingCertificates: {}
+  installed: false
+  clusterInstallRef:
+    group: extensions.hive.openshift.io
+    kind: AgentClusterInstall
+    name: kni21
+    version: v1beta1
+  platform:
+    agentBareMetal:
+      agentSelector:
+        matchLabels:
+          project: kni21
+  pullSecretRef:
+    name: pull-secret
+EOF
+~~~
+
+The rest of the components which will also be appended do not need much tweaking:
+
+~~~bash
+% cat << EOF >> ~/cluster-kni21.yaml
+---
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: kni21
+  namespace: kni21
+spec:
+  clusterName: kni21
+  clusterNamespace: kni21
+  clusterLabels:
+    cloud: auto-detect
+    vendor: auto-detect
+  applicationManager:
+    enabled: false
+  certPolicyController:
+    enabled: false
+  iamPolicyController:
+    enabled: false
+  policyController:
+    enabled: false
+  searchCollector:
+    enabled: false
+    
+---
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: kni21
+  namespace: kni21
+spec:
+  hubAcceptsClient: true
+EOF
+~~~
+
+With the resource file cluster-kni21.yaml created lets go ahead and apply it to our hub cluster:
+
+~~~bash
+% oc create -f ~/cluster1.yaml
+agentclusterinstall.extensions.hive.openshift.io/cluster1 created
+clusterdeployment.hive.openshift.io/cluster1 created
+klusterletaddonconfig.agent.open-cluster-management.io/cluster1 created
+managedcluster.cluster.open-cluster-management.io/cluster1 created
+~~~
+
+Now that we have a cluster defined lets go ahead and associate the nodes we discovered with our agent to the cluster.  We do this by binding them to the cluster we just defined:
+
+~~~bash
+% oc get agent -n magic-carpet -o json | jq -r '.items[] | select(.spec.approved==false) | .metadata.name' | xargs oc -n magic-carpet patch -p '{"spec":{"clusterDeploymentName":{"name": "cluster1", "namespace": "cluster1"}}}' --type merge agent
+agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
+agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
+agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
+agent.agent-install.openshift.io/43c52512-05bb-70c0-d453-b6e171a89db3 patched
+agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
+~~~
+
+Then we can either manually approve each agent with the following:
+
+~~~bash
+~ % oc -n magic-carpet patch -p '{"spec":{"approved":true}}' --type merge agent <AGENT_ID_NAME>
+~~~
+
+Or we can approve them all as we did in this example:
+
+~~~bash
+~ % oc get agent -n magic-carpet -ojson | jq -r '.items[] | select(.spec.approved==false) | .metadata.name'| xargs oc -n magic-carpet patch -p '{"spec":{"approved":true}}' --type merge agent
+agent.agent-install.openshift.io/2aa0c057-1582-ca6a-7949-bb1e82496e71 patched
+agent.agent-install.openshift.io/371e1165-d9ad-d17a-d28a-ebf2a32239ae patched
+agent.agent-install.openshift.io/3ada3adc-611f-687a-2429-dea0e85a980c patched
+agent.agent-install.openshift.io/43c52512-05bb-70c0-d453-b6e171a89db3 patched
+agent.agent-install.openshift.io/56eccb54-28af-4983-a19b-ed036f05b7d6 patched
+
+~ % oc get agent -n magic-carpet                                                                                                                                                              
+NAME                                   CLUSTER   APPROVED   ROLE          STAGE
+2aa0c057-1582-ca6a-7949-bb1e82496e71             true       auto-assign   
+371e1165-d9ad-d17a-d28a-ebf2a32239ae             true       auto-assign   
+3ada3adc-611f-687a-2429-dea0e85a980c             true       auto-assign   
+43c52512-05bb-70c0-d453-b6e171a89db3             true       auto-assign   
+56eccb54-28af-4983-a19b-ed036f05b7d6             true       auto-assign 
+~~~
+
+
+### Wait for installation process to complete
+Now all we need is to wait for the cluster to be fully provisioned
+As a node is installed, we should see its agent transitioning to `Done` state
+~~~bash
+oc get agent -n magic-carpet -w
+~~~
+
+### Extract kubeconfig for cluster1
+We should extract the kubeconfig file from its secret in the cluster's namespace
+~~~bash
+oc get secret -n cluster1 cluster1-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > cluster1-kubeconfig
+~~~
