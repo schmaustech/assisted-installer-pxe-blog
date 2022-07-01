@@ -440,21 +440,248 @@ cef2bbd6-f974-5ecf-331e-db11391fd7a5   kni21     true       master
 d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9   kni21     true       master  
 ~~~
 
-Now all we need is to wait for the cluster to be fully provisioned
-As a node is installed, we should see its agent transitioning to `Done` state
+Now all we need is to wait for the cluster to be fully provisioned.  There are a few commands we can run while its deploying if one wants to check on the deployment process.  Here are a few suggestions with the associated output:
+
+~~~bash
+$ oc get AgentClusterInstall -n kni21
+NAME    CLUSTER   STATE
+kni21   kni21     installing
+
+$ oc get AgentClusterInstall -n kni21 -o yaml
+apiVersion: v1
+items:
+- apiVersion: extensions.hive.openshift.io/v1beta1
+  kind: AgentClusterInstall
+  metadata:
+    creationTimestamp: "2022-07-01T16:21:01Z"
+    finalizers:
+    - agentclusterinstall.agent-install.openshift.io/ai-deprovision
+    generation: 3
+    name: kni21
+    namespace: kni21
+    ownerReferences:
+    - apiVersion: hive.openshift.io/v1
+      kind: ClusterDeployment
+      name: kni21
+      uid: 733dbd01-c811-4553-9563-d98c49902dd0
+    resourceVersion: "3000112"
+    uid: 3eb51c0b-1fa9-4eec-8527-fc1b1aff4e79
+  spec:
+    apiVIP: 192.168.0.120
+    clusterDeploymentRef:
+      name: kni21
+    clusterMetadata:
+      adminKubeconfigSecretRef:
+        name: kni21-admin-kubeconfig
+      clusterID: 1881bae0-22a2-4e18-a921-aee98113dfde
+      infraID: 37ae4a10-7491-4ba1-8559-6d504519c765
+    imageSetRef:
+      name: openshift-v4.10.16
+    ingressVIP: 192.168.0.121
+    networking:
+      clusterNetwork:
+      - cidr: 10.128.0.0/14
+        hostPrefix: 23
+      serviceNetwork:
+      - 172.30.0.0/16
+    provisionRequirements:
+      controlPlaneAgents: 3
+    sshPublicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCoy2/8SC8K+9PDNOqeNady8xck4AgXqQkf0uusYfDJ8IS4pFh178AVkz2sz3GSbU41CMxO6IhyQS4Rga3Ft/VlW6ZAW7icz3mw6IrLRacAAeY1BlfxfupQL/yHjKSZRze9vDjfQ9UDqlHF/II779Kz5yRKYqXsCt+wYESU7DzdPuGgbEKXrwi9GrxuXqbRZOz5994dQW7bHRTwuRmF9KzU7gMtMCah+RskLzE46fc2e4zD1AKaQFaEm4aGbJjQkELfcekrE/VH3i35cBUDacGcUYmUEaco3c/+phkNP4Iblz4AiDcN/TpjlhbU3Mbx8ln6W4aaYIyC4EVMfgvkRVS1xzXcHexs1fox724J07M1nhy+YxvaOYorQLvXMGhcBc9Z2Au2GA5qAr5hr96AHgu3600qeji0nMM/0HoiEVbxNWfkj4kAegbItUEVBAWjjpkncbe5Ph9nF2DsBrrg4TsJIplYQ+lGewzLTm/cZ1DnIMZvTY/Vnimh7qa9aRrpMB0=
+      bschmaus@provisioning
+  status:
+    apiVIP: 192.168.0.120
+    conditions:
+    - lastProbeTime: "2022-07-01T16:21:04Z"
+      lastTransitionTime: "2022-07-01T16:21:04Z"
+      message: SyncOK
+      reason: SyncOK
+      status: "True"
+      type: SpecSynced
+    - lastProbeTime: "2022-07-01T16:23:32Z"
+      lastTransitionTime: "2022-07-01T16:23:32Z"
+      message: The cluster's validations are passing
+      reason: ValidationsPassing
+      status: "True"
+      type: Validated
+    - lastProbeTime: "2022-07-01T16:23:32Z"
+      lastTransitionTime: "2022-07-01T16:23:32Z"
+      message: The cluster requirements are met
+      reason: ClusterAlreadyInstalling
+      status: "True"
+      type: RequirementsMet
+    - lastProbeTime: "2022-07-01T16:26:02Z"
+      lastTransitionTime: "2022-07-01T16:26:02Z"
+      message: 'The installation is in progress: Installation in progress'
+      reason: InstallationInProgress
+      status: "False"
+      type: Completed
+    - lastProbeTime: "2022-07-01T16:21:04Z"
+      lastTransitionTime: "2022-07-01T16:21:04Z"
+      message: The installation has not failed
+      reason: InstallationNotFailed
+      status: "False"
+      type: Failed
+    - lastProbeTime: "2022-07-01T16:21:04Z"
+      lastTransitionTime: "2022-07-01T16:21:04Z"
+      message: The installation is waiting to start or in progress
+      reason: InstallationNotStopped
+      status: "False"
+      type: Stopped
+    connectivityMajorityGroups: '{"192.168.0.0/24":["07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a","cef2bbd6-f974-5ecf-331e-db11391fd7a5","d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9"],"IPv4":["07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a","cef2bbd6-f974-5ecf-331e-db11391fd7a5","d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9"],"IPv6":["07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a","cef2bbd6-f974-5ecf-331e-db11391fd7a5","d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9"]}'
+    debugInfo:
+      eventsURL: https://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/events?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbHVzdGVyX2lkIjoiMzdhZTRhMTAtNzQ5MS00YmExLTg1NTktNmQ1MDQ1MTljNzY1In0.p1LuadM3n_NbbjgUP6MvL-34wifAy2aVqgL9K1b54bIrUbN4QyK2Kdtxt03JJxsH4rL-PNnenGkrTLEfhyvLnw&cluster_id=37ae4a10-7491-4ba1-8559-6d504519c765
+      logsURL: ""
+      state: installing
+      stateInfo: Installation in progress
+    ingressVIP: 192.168.0.121
+    machineNetwork:
+    - cidr: 192.168.0.0/24
+    progress:
+      totalPercentage: 50
+    validationsInfo:
+      configuration:
+      - id: pull-secret-set
+        message: The pull secret is set.
+        status: success
+      hosts-data:
+      - id: all-hosts-are-ready-to-install
+        message: All hosts in the cluster are ready to install.
+        status: success
+      - id: sufficient-masters-count
+        message: The cluster has a sufficient number of master candidates.
+        status: success
+      network:
+      - id: api-vip-defined
+        message: The API virtual IP is defined.
+        status: success
+      - id: api-vip-valid
+        message: api vip 192.168.0.120 belongs to the Machine CIDR and is not in use.
+        status: success
+      - id: cluster-cidr-defined
+        message: The Cluster Network CIDR is defined.
+        status: success
+      - id: dns-domain-defined
+        message: The base domain is defined.
+        status: success
+      - id: ingress-vip-defined
+        message: The Ingress virtual IP is defined.
+        status: success
+      - id: ingress-vip-valid
+        message: ingress vip 192.168.0.121 belongs to the Machine CIDR and is not
+          in use.
+        status: success
+      - id: machine-cidr-defined
+        message: The Machine Network CIDR is defined.
+        status: success
+      - id: machine-cidr-equals-to-calculated-cidr
+        message: The Cluster Machine CIDR is equivalent to the calculated CIDR.
+        status: success
+      - id: network-prefix-valid
+        message: The Cluster Network prefix is valid.
+        status: success
+      - id: network-type-valid
+        message: The cluster has a valid network type
+        status: success
+      - id: networks-same-address-families
+        message: Same address families for all networks.
+        status: success
+      - id: no-cidrs-overlapping
+        message: No CIDRS are overlapping.
+        status: success
+      - id: ntp-server-configured
+        message: No ntp problems found
+        status: success
+      - id: service-cidr-defined
+        message: The Service Network CIDR is defined.
+        status: success
+      operators:
+      - id: cnv-requirements-satisfied
+        message: cnv is disabled
+        status: success
+      - id: lso-requirements-satisfied
+        message: lso is disabled
+        status: success
+      - id: odf-requirements-satisfied
+        message: odf is disabled
+        status: success
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+~~~
+
+Once the cluster installation completes in my case after around 60 minutes we can confirm the cluster installation is done by executing the following command to see the agent status: 
+
 ~~~bash
 $ oc get agent -n kni21 -w
+NAME                                   CLUSTER   APPROVED   ROLE     STAGE
+07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a   kni21     true       master   Done
+cef2bbd6-f974-5ecf-331e-db11391fd7a5   kni21     true       master   Done
+d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9   kni21     true       master   Done
 ~~~
 
-We should extract the kubeconfig file from its secret in the cluster's namespace
+We can also confirm the cluster is available by checking the managedcluster list on the hub cluster:
+
 ~~~bash
-$ oc get secret -n kni21 kni21-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > kni21-kubeconfig
+$ oc get managedcluster
+NAME            HUB ACCEPTED   MANAGED CLUSTER URLS                     JOINED   AVAILABLE   AGE
+kni21           true           https://api.kni21.schmaustech.com:6443   True     True        80m
+local-cluster   true           https://api.kni20.schmaustech.com:6443   True     True        21h
 ~~~
 
+At this point we can extract the kubeconfig file from its secret in the cluster's namespace and run some validation checking to ensure our kni21 spoke cluster is up and running:
 
-And now we can query the cluster API using `oc`
+~~~bash
+$ oc get secret -n kni21 kni21-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > cluster-kni21-kubeconfig
+~~~
+
+And now we can query the cluster API with the following commands:
+
 ~~~bash
 $ KUBECONFIG=cluster-kni21-kubeconfig oc get node
+NAME                   STATUS   ROLES           AGE   VERSION
+nuc1.schmaustech.com   Ready    master,worker   69m   v1.23.5+3afdacb
+nuc2.schmaustech.com   Ready    master,worker   68m   v1.23.5+3afdacb
+nuc3.schmaustech.com   Ready    master,worker   48m   v1.23.5+3afdacb
+
 $ KUBECONFIG=cluster-kni21-kubeconfig oc get clusteroperators
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+authentication                             4.10.16   True        False         False      34m     
+baremetal                                  4.10.16   True        False         False      64m     
+cloud-controller-manager                   4.10.16   True        False         False      68m     
+cloud-credential                           4.10.16   True        False         False      74m     
+cluster-autoscaler                         4.10.16   True        False         False      64m     
+config-operator                            4.10.16   True        False         False      66m     
+console                                    4.10.16   True        False         False      42m     
+csi-snapshot-controller                    4.10.16   True        False         False      65m     
+dns                                        4.10.16   True        False         False      64m     
+etcd                                       4.10.16   True        False         False      63m     
+image-registry                             4.10.16   True        False         False      53m     
+ingress                                    4.10.16   True        False         False      55m     
+insights                                   4.10.16   True        False         False      59m     
+kube-apiserver                             4.10.16   True        False         False      53m     
+kube-controller-manager                    4.10.16   True        False         False      60m     
+kube-scheduler                             4.10.16   True        False         False      59m     
+kube-storage-version-migrator              4.10.16   True        False         False      66m     
+machine-api                                4.10.16   True        False         False      56m     
+machine-approver                           4.10.16   True        False         False      64m     
+machine-config                             4.10.16   True        False         False      45m     
+marketplace                                4.10.16   True        False         False      64m     
+monitoring                                 4.10.16   True        False         False      49m     
+network                                    4.10.16   True        False         False      66m     
+node-tuning                                4.10.16   True        False         False      64m     
+openshift-apiserver                        4.10.16   True        False         False      45m     
+openshift-controller-manager               4.10.16   True        False         False      61m     
+openshift-samples                          4.10.16   True        False         False      55m     
+operator-lifecycle-manager                 4.10.16   True        False         False      65m     
+operator-lifecycle-manager-catalog         4.10.16   True        False         False      65m     
+operator-lifecycle-manager-packageserver   4.10.16   True        False         False      56m     
+service-ca                                 4.10.16   True        False         False      66m     
+storage                                    4.10.16   True        False         False      67m 
+
 $ KUBECONFIG=cluster-kni21-kubeconfig oc get clusterversion
+NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
+version   4.10.16   True        False         34m     Cluster version is 4.10.16
 ~~~
+
+Everything looks good from the output above and to imagine it was all deployed using the PXE artifacts that are now available in Red Hat Advanced Cluster Management 2.5.1.  
