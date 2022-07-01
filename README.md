@@ -2,9 +2,9 @@
 
 <img src="224_RHACM_Cluster_Lifecycle_Arch_0222.png" style="width: 1000px;" border=0/>
 
-Anyone who has used Red Hat Advanced Cluster Management for Kubernetes knows it offers a multitude of ways to manage and deploy the OpenShift cluster lifecycle depending on whether one is deploying on prem or within one of the supported clouds.  In Red Hat Adavanced Cluster Management for Kubernetes 2.4 the Cluster Infrastructure Management interface, which is reliant on using the Assisted Installer behind the scenes, was introduced.  This option for deploying a baremetal cluster relied on server nodes that could support the mounting the discovery image via virtual media if the goal was to do zero touch provisioning.  However this lead to a gap for hardware that did not have the virtual media capability but still wanted to be deployed without having to actually take a USB stick with the image into the datacenter.
+Anyone who has used Red Hat Advanced Cluster Management for Kubernetes knows it offers a multitude of ways to manage and deploy the OpenShift cluster lifecycle depending on whether one is deploying on prem or within one of the supported clouds.  In Red Hat Adavanced Cluster Management for Kubernetes 2.4 the Cluster Infrastructure Management interface, which is reliant on using the Assisted Installer behind the scenes, was introduced.  This option for deploying a baremetal cluster relied on server nodes that could support the mounting of the discovery image via virtual media if the goal was to do zero touch provisioning.  However this lead to a gap for hardware that did not have the virtual media capability but still wanted to be deployed without having to actually take a USB stick with the image into the datacenter.
 
-With the introduction of Red Hat Advanced Cluster Management for Kubernetes 2.5.1 we are introducting the capability of being able to PXE boot servers via the Cluster Infrastructure Management interface.  This feature will breath new life into those hosts that suffered the lack of remote virtual media mounts. Let's go ahead and see how this new option will work in a practical example.
+With the introduction of Red Hat Advanced Cluster Management for Kubernetes 2.5.1 we now have the capability of being able to PXE boot servers via the Cluster Infrastructure Management interface.  This feature will breath new life into those hosts that suffered the lack of remote virtual media mounts. Let's go ahead and see how this new option will work in a practical example.
 
 First lets talk a bit about the reference architecture I am using.  I currently have a Red Hat Advanced Cluster Management for Kubernestes 2.5.1 hub cluster running on a 3 node compact OpenShift 4.10.16 cluster with OpenShift Data Foundation 4.10 acting as the storage for any of my persisten volume requirements.  Further I have a ISCP DHCP server setup on my private network of 192.168.0.0/24 to provide DHCP reservations for the 3 hosts we will discover via the PXE boot method and deploy OpenShift onto.
 
@@ -15,7 +15,7 @@ $ oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"wa
 provisioning.metal3.io/provisioning-configuration patched
 ~~~
 
-Next let's create the ClusterImageset resource yaml which will point to OpenShift 4.10.16:
+Now lets get started by creating the ClusterImageset resource yaml which will point to OpenShift 4.10.16 release:
 
 ~~~bash
 $ cat << EOF > ~/kni20-clusterimageset.yaml
@@ -29,14 +29,13 @@ spec:
 EOF  
 ~~~
 
-Now let's apply the cluster imageset to the cluster:
+Next we will apply the cluster imageset to the hub cluster:
 
 ~~~bash
 $ oc create -f ~/kni20-clusterimageset.yaml 
 clusterimageset.hive.openshift.io/openshift-v4.10.16 created
 ~~~
-
-Next we need to create a mirror config which tells the assisted image service where to get the images from, since I am using a prerelease version.  This step should not be needed when the release goes GA.  However it should be noted this step would be needed if performing a disconnected installation since we would need to tell the discovery ISO where to pull the images from if using a local registry. Let's create the configuration using the below:
+Then we need to define a mirror config which tells the assisted image service where to get the images from, since I am using a prerelease version of Red Hat Advanced Cluster Management.  This step should not be needed when the release goes GA.  However it should be noted this step would be needed if performing a disconnected installation since we would need to tell the discovery ISO where to pull the images from if using a local registry. Let's create the configuration using the below:
 
 ~~~bash
 $ cat << EOF > ~/kni20-mirror-config.yaml
@@ -77,14 +76,14 @@ data:
 EOF
 ~~~
 
-Now let's create the mirror configuration on the hub cluster:
+Now we will apply the mirror configuration on the hub cluster:
 
 ~~~bash
 $ oc create -f kni20-mirror-config.yaml 
 configmap/kni20-mirror-config created
 ~~~
 
-For Assisted Installer we need to create an agent service configuration resource that will tell the operator how much storage we need for the various components like database and filesystem. It will also define which OpenShift versions to maintain.  However since we are going to use PXE as our discovery boot method we have also added in the iPXEHTTPRoute option.  This will enable and expose HTTP routes that will serve up the required artifacts. 
+For Assisted Installer we need to create an agent service configuration resource that will tell the operator how much storage we need for the various components like database and filesystem. It will also define which OpenShift versions to maintain.  However since we are going to use PXE as our discovery boot method we have also added in the iPXEHTTPRoute option set to enabled (by default it is disabled).  This will enable and expose HTTP routes that will serve up the required PXE artifacts. 
 
 ~~~bash
 $ cat << EOF > ~/kni20-agentserviceconfig.yaml
@@ -124,13 +123,12 @@ $ oc create -f ~/kni20-agentserviceconfig.yaml
 agentserviceconfig.agent-install.openshift.io/agent created
 ~~~
 
-After a few minutes validate that the pods for the Infrastructure operator have started:
+After a few minutes validate that the pods for the Assisted Installer have started and their corresponding PVCs exist:
 
 ~~~bash
 $ oc get pods -n multicluster-engine |grep assisted
 assisted-image-service-0                               0/1     Running   0          92s
 assisted-service-5b65cfd866-sp2vs                      2/2     Running   0          93s
-
 
 $ oc get pvc -n multicluster-engine
 NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS                  AGE
@@ -138,7 +136,7 @@ assisted-service   Bound    pvc-5d485331-c3e2-4331-bbe8-1635be66d07d   20Gi     
 postgres           Bound    pvc-bcfa2e1c-63b7-4818-9848-00c6101efcce   20Gi       RWO            ocs-storagecluster-ceph-rbd   113s
 ~~~
 
-Let's further validate that the HTTP routes I mentioned were also created:
+Let's further validate that the HTTP routes I mentioned above that expose the PXE artifacts were also created.  We should see two http routes along with two others that are encrypted.
 
 ~~~bash
 $ oc get routes -n multicluster-engine
@@ -149,7 +147,7 @@ assisted-service              assisted-service-multicluster-engine.apps.kni20.sc
 assisted-service-ipxe         assisted-service-multicluster-engine.apps.kni20.schmaustech.com         /      assisted-service         assisted-service-http                       None
 ~~~
 
-We have now completed the additional configuration steps needed for Cluster Infrastructure Management and Assisted Installer.  Now lets move onto defining the resources for spoke cluster which will be called kni21.  The first step here is to create a namespace which we will name after our cluster name:
+We have now completed the additional configuration steps needed for Cluster Infrastructure Management and Assisted Installer to serve up the PXE artifacts.  Now lets move onto defining the resources for spoke cluster which will be called kni21.  The first step here is to create a namespace which we will name after our cluster name:
 
 ~~~bash
 $ oc create namespace kni21
@@ -163,7 +161,7 @@ $ oc create secret generic pull-secret -n kni21 --from-file=.dockerconfigjson=me
 secret/pull-secret created
 ~~~
 
-Next we will generate an infrastructure environment resource configuration that will contain an public SSH key:
+Next we will generate an infrastructure environment resource configuration that will contain an public SSH key and reference the pull-secret secret we created previoulsy in this namespace:
 
 ~~~bash
 $ cat << EOF > ~/kni21-infraenv.yaml
@@ -202,7 +200,7 @@ We can curl the script down so we can examine its contents to get a better under
 curl -L -o ipxe -O 'http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script'
 ~~~
 
-With the contents downloaded lets cat out the file which is basically a iPXE script.  The script basically contains the details of where to pull the initial boot kernel, initrd and rootfs.  These are all the components that make us the discovery ISO only we have broken them out as artifacts for the sake of PXE booting.
+With the contents downloaded lets cat out the file which is basically a iPXE script.  The script basically contains the details of where to pull the initial boot kernel, initrd and rootfs.  These are all the components that make up the discovery ISO only we have broken them out as artifacts for the sake of PXE booting.
 
 ~~~bash
 $ cat ipxe
@@ -212,7 +210,7 @@ kernel http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.
 boot
 ~~~
 
-To consume the iPXE we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example I chose to host the ipxe script myself and chain any PXE clients to boot into an iPXE kernel to pick it up.   The snippets from my relevant DHCP config is below:
+To consume the iPXE script we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example I chose to host the ipxe script myself and chain any PXE clients to boot into an iPXE kernel to pick it up.   The snippets from my relevant DHCP config are below along with the host reservations:
 
 ~~~
 subnet 192.168.0.0 netmask 255.255.255.0 {
@@ -250,7 +248,7 @@ host nuc3 {
 }
 ~~~
 
-Along with the DHCP configuration I have the following files present in my tftboot location.  What happens in my DHCP chaining example is that a PXE client will boot request and DHCP will see its a PXE client and serve it pxelinux.0 which points to a default config under the pxelinux.cfg directory.  The default config is just a pointer to an iPXE kernel which will then be called and request DHCP again which now is seen as an iPXE client and will execute the iPXE script to start the boot process.
+Along with the DHCP configuration I have the following files present in my tftboot location.  What happens in my DHCP chaining example is that a PXE client will send out a boot request and DHCP will see its a PXE client and serve it pxelinux.0 which points to a default config under the pxelinux.cfg directory.  The default config is just a pointer to an iPXE kernel which will then be called and request DHCP again which now is seen as an iPXE client and will execute the iPXE script to start the boot process.
 
 ~~~bash
 $ pwd
