@@ -259,11 +259,11 @@ $ cat ./pxelinux.cfg/default
 DEFAULT ipxe.lkrn
 ~~~
 
-With our DHCP configurations in place we can now boot our 3 nodes that will be used to deploy our kni21 cluster.  The following screenshot is an example of what one would expect to see.  In this example we also see how the chaining works.
+With our DHCP configurations in place we can now boot our 3 nodes that will be used to deploy our kni21 cluster.  The following screenshot is an example of what one would expect to see during the PXE chaining process.
 
 <img src="ipxe-dhcp.jpg" style="width: 1000px;" border=0/>
 
-After booting the nodes and waiting for a few minutes we should now see agents reporting in:
+After booting the nodes and waiting for a few minutes we should now see agents reporting in when looking at the agent resource in the kni21 namespace:
 
 ~~~bash
 $ oc get agent -n kni21 
