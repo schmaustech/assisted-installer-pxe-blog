@@ -1,4 +1,4 @@
-# **Cluster Infrastructure Management Using PXE**
+# **PXE Artifacts in Red Hat Advanced Cluster Management for Kubernetes**
 
 <img src="224_RHACM_Cluster_Lifecycle_Arch_0222.png" style="width: 1000px;" border=0/>
 
@@ -36,9 +36,7 @@ $ oc create -f ~/kni20-clusterimageset.yaml
 clusterimageset.hive.openshift.io/openshift-v4.10.16 created
 ~~~
 
-Next we need to create a mirror config which tells the assisted image service where to get the images from, since we are using a disconnected installation to deploy clustersN+1.  This configuration should contain the CA certificate and any registry references to ensure that the cluster being deployed knows to pull the images it needs from the local registry.
-
-Let's create the config using the below:
+Next we need to create a mirror config which tells the assisted image service where to get the images from, since I am using a prerelease version.  This step should not be needed when the release goes GA.  However it should be noted this step would be needed if performing a disconnected installation since we would need to tell the discovery ISO where to pull the images from if using a local registry. Let's create the configuration using the below:
 
 ~~~bash
 $ cat << EOF > ~/kni20-mirror-config.yaml
@@ -79,14 +77,14 @@ data:
 EOF
 ~~~
 
-Now let's create the mirror configuration on cluster0:
+Now let's create the mirror configuration on the hub cluster:
 
 ~~~bash
 $ oc create -f kni20-mirror-config.yaml 
 configmap/kni20-mirror-config created
 ~~~
 
-For Assisted Installer we need to create an agent service configuration resource that will tell the operator how much storage we need for the various components like database and filesystem. It will also define which OpenShift versions to maintain.
+For Assisted Installer we need to create an agent service configuration resource that will tell the operator how much storage we need for the various components like database and filesystem. It will also define which OpenShift versions to maintain.  However since we are going to use PXE as our discovery boot method we have also added in the iPXEHTTPRoute option.  This will enable and expose HTTP routes that will serve up the required artifacts. 
 
 ~~~bash
 $ cat << EOF > ~/kni20-agentserviceconfig.yaml
@@ -140,6 +138,7 @@ assisted-service   Bound    pvc-5d485331-c3e2-4331-bbe8-1635be66d07d   20Gi     
 postgres           Bound    pvc-bcfa2e1c-63b7-4818-9848-00c6101efcce   20Gi       RWO            ocs-storagecluster-ceph-rbd   113s
 ~~~
 
+Let's further validate that the HTTP routes I mentioned were also created:
 
 ~~~bash
 $ oc get routes -n multicluster-engine
@@ -197,9 +196,13 @@ $ oc get infraenv kni21 -n kni21 -o yaml|grep ipxeScript
     ipxeScript: http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac-9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script
 ~~~
 
+We can curl the script down so we can examine its contents to get a better understanding of what it does:
+
 ~~~bash
 curl -L -o ipxe -O 'http://assisted-service-multicluster-engine.apps.kni20.schmaustech.com/api/assisted-install/v2/infra-envs/a2ab51ad-c217-4bac9a45-1d3eebb88b9a/downloads/files?api_key=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbmZyYV9lbnZfaWQiOiJhMmFiNTFhZC1jMjE3LTRiYWMtOWE0NS0xZDNlZWJiODhiOWEifQ.73dkqVX8IkrdvBBQln_KTDjzIdYR0YRv3Ky-rm8rxClqg-lz8PyrPdbkJXwFLusGwGDik6bBpGkx4Lf_cDeSWg&file_name=ipxe-script'
 ~~~
+
+With the contents downloaded lets cat out the file which is basically a iPXE script.  The script basically contains the details of where to pull the initial boot kernel, initrd and rootfs.  These are all the components that make us the discovery ISO only we have broken them out as artifacts for the sake of PXE booting.
 
 ~~~bash
 $ cat ipxe
@@ -208,6 +211,8 @@ initrd --name initrd http://assisted-image-service-multicluster-engine.apps.kni2
 kernel http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com/boot-artifacts/kernel?arch=x86_64&version=4.10 initrd=initrd coreos.live.rootfs_url=http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.com/boot-artifacts/rootfs?arch=x86_64&version=4.10 random.trust_cpu=on rd.luks.options=discard ignition.firstboot ignition.platform.id=metal console=tty1 console=ttyS1,115200n8 coreos.inst.persistent-kargs="console=tty1 console=ttyS1,115200n8"
 boot
 ~~~
+
+To consume the iPXE we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example my systems boot with PXE and by default 
 
 ~~~
 subnet 192.168.0.0 netmask 255.255.255.0 {
