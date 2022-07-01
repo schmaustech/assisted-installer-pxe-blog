@@ -265,3 +265,12 @@ With our DHCP configurations in place we can now boot our 3 nodes that will be u
 
 <img src="ipxe-dhcp.jpg" style="width: 1000px;" border=0/>
 
+After booting the nodes and waiting for a few minutes we should now see agents reporting in:
+
+~~~bash
+$ oc get agent -n kni21 
+NAME                                   CLUSTER   APPROVED   ROLE          STAGE
+07f25812-6c5b-ece8-a4d5-9a3c2c76fa3a             false      auto-assign   
+cef2bbd6-f974-5ecf-331e-db11391fd7a5             false      auto-assign   
+d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9             false      auto-assign 
+~~~
