@@ -609,7 +609,7 @@ metadata:
   selfLink: ""
 ~~~
 
-Once the cluster installation completes in my case after around 60 minutes we can confirm the cluster installation is done by executing the following command to see the agent status: 
+Once the cluster installation completes in my case after around 60 minutes we can confirm the spoke cluster installation is done by executing the following command to see the agent status: 
 
 ~~~bash
 $ oc get agent -n kni21 -w
@@ -619,7 +619,7 @@ cef2bbd6-f974-5ecf-331e-db11391fd7a5   kni21     true       master   Done
 d1e0c4b8-6f70-8d5b-93a3-706754ee2ee9   kni21     true       master   Done
 ~~~
 
-We can also confirm the cluster is available by checking the managedcluster list on the hub cluster:
+We can also confirm the spoke cluster is available by checking the managedcluster list on the hub cluster:
 
 ~~~bash
 $ oc get managedcluster
@@ -628,13 +628,13 @@ kni21           true           https://api.kni21.schmaustech.com:6443   True    
 local-cluster   true           https://api.kni20.schmaustech.com:6443   True     True        21h
 ~~~
 
-At this point we can extract the kubeconfig file from its secret in the cluster's namespace and run some validation checking to ensure our kni21 spoke cluster is up and running:
+At this point we can extract the kubeconfig file from its secret in the hub cluster's namespace and run some validation checking to ensure our kni21 spoke cluster is up and running:
 
 ~~~bash
 $ oc get secret -n kni21 kni21-admin-kubeconfig  -ojsonpath='{.data.kubeconfig}'| base64 -d > cluster-kni21-kubeconfig
 ~~~
 
-And now we can query the cluster API with the following commands:
+And now we can query the spoke cluster API with the following commands:
 
 ~~~bash
 $ KUBECONFIG=cluster-kni21-kubeconfig oc get node
