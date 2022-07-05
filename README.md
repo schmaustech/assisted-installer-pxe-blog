@@ -211,7 +211,7 @@ kernel http://assisted-image-service-multicluster-engine.apps.kni20.schmaustech.
 boot
 ~~~
 
-To consume the iPXE script we can take a couple of different approaches.  The most hands off way would be to call the iPXE script directly but that also assumes the system booting has iPXE in the network interface firmware.   In my example I chose to host the ipxe script myself and chain any PXE clients to boot into an iPXE kernel to pick it up.   The snippets from my relevant DHCP config are below along with the host reservations:
+To consume the iPXE script we can take a couple of different approaches. The easiest and most hands off method would be to just point directly to the script when PXE booting.   In my example though, I chose to host the ipxe script myself and chain any PXE clients to boot into an iPXE kernel to pick it up.   The snippets from my relevant DHCP config are below along with the host reservations:
 
 ~~~
 subnet 192.168.0.0 netmask 255.255.255.0 {
