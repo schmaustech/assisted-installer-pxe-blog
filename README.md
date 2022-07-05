@@ -155,7 +155,7 @@ $ oc create namespace kni21
 namespace/kni21 created
 ~~~
 
-Next we need to create a secret to store our pull-secret within that namespace:
+In the namespace we just created lets create a secret to store our pull-secret:
 
 ~~~bash
 $ oc create secret generic pull-secret -n kni21 --from-file=.dockerconfigjson=merged-pull-secret.json --type=kubernetes.io/dockerconfigjson
