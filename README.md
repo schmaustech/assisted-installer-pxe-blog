@@ -1,6 +1,6 @@
 # **PXE Artifacts in Red Hat Advanced Cluster Management for Kubernetes**
 
-<img src="224_RHACM_Cluster_Lifecycle_Arch_0222.png" style="width: 1000px;" border=0/>
+<img src="penart.jpg" style="width: 1000px;" border=0/>
 
 Anyone who has used Red Hat Advanced Cluster Management for Kubernetes knows it offers a multitude of ways to manage and deploy the OpenShift cluster lifecycle depending on whether one is deploying on prem or within one of the supported clouds.  In Red Hat Adavanced Cluster Management for Kubernetes 2.4 the Cluster Infrastructure Management interface, which is reliant on using the Assisted Installer behind the scenes, was introduced.  This option for deploying a baremetal cluster relied on server nodes that could support the mounting of the discovery image via virtual media if the goal was to do zero touch provisioning.  However this lead to a gap for hardware that did not have the virtual media capability but still wanted to be deployed without having to actually take a USB stick with the image into the datacenter.
 
