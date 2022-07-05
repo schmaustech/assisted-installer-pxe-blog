@@ -6,9 +6,9 @@ Anyone who has used Red Hat Advanced Cluster Management for Kubernetes knows it 
 
 With the introduction of Red Hat Advanced Cluster Management for Kubernetes 2.5.1 we now have the capability of being able to PXE boot servers via the Cluster Infrastructure Management interface.  This feature will breath new life into those hosts that suffered the lack of remote virtual media mounts. Let's go ahead and see how this new option will work in a practical example.
 
-First lets talk a bit about the reference architecture I am using.  I currently have a Red Hat Advanced Cluster Management for Kubernestes 2.5.1 hub cluster running on a 3 node compact OpenShift 4.10.16 cluster with OpenShift Data Foundation 4.10 acting as the storage for any of my persisten volume requirements.  Further I have a ISCP DHCP server setup on my private network of 192.168.0.0/24 to provide DHCP reservations for the 3 hosts we will discover via the PXE boot method and deploy OpenShift onto.
+First lets talk a bit about the reference architecture I am using.  I currently have a Red Hat Advanced Cluster Management for Kubernestes 2.5.1 hub cluster running on a 3 node compact OpenShift 4.10.16 cluster with OpenShift Data Foundation 4.10 acting as the storage for any of my persistent volume requirements.  Further I have a DHCP server setup on my private network of 192.168.0.0/24 to provide DHCP reservations for the 3 hosts we will discover via the PXE boot method and deploy OpenShift onto.
 
-Before we can use the Cluster Infrastrutcture Management portion of Red Hat Advanced Cluster Management for Kubernetes we need to enable the metal3 provisioning configuration to watch all namespace.
+Before we can use the Cluster Infrastrutcture Management portion of Red Hat Advanced Cluster Management for Kubernetes we need to enable the metal3 provisioning configuration to watch all namespaces.  We can do that with the following command if it has not been done already:
 
 ~~~bash
 $ oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"watchAllNamespaces": true }}'
@@ -35,7 +35,8 @@ Next we will apply the cluster imageset to the hub cluster:
 $ oc create -f ~/kni20-clusterimageset.yaml 
 clusterimageset.hive.openshift.io/openshift-v4.10.16 created
 ~~~
-Then we need to define a mirror config which tells the assisted image service where to get the images from, since I am using a prerelease version of Red Hat Advanced Cluster Management.  This step should not be needed when the release goes GA.  However it should be noted this step would be needed if performing a disconnected installation since we would need to tell the discovery ISO where to pull the images from if using a local registry. Let's create the configuration using the below:
+
+Then we need to define a mirror config which tells the assisted image service where to get the images from, since I am using a prerelease version of Red Hat Advanced Cluster Management.  This step should not be needed when the release goes GA.  However it should be noted this step would be needed if performing a disconnected installation since we would need to tell the discovery ISO where to pull the images from if using a local registry or different registry other then the default. Let's create the configuration using the below example:
 
 ~~~bash
 $ cat << EOF > ~/kni20-mirror-config.yaml
